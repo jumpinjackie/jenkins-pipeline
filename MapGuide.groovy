@@ -17,7 +17,7 @@
  * - MG_CLEANUP_AFTER: If builds and test pass, this will instruct the pipeline to clear the build and staging areas afterwards
  */
 node {
-    env.PATH = "${env.PATH};C:\\Program Files (x86)\\Subversion\\bin"
+    env.PATH = "${env.PATH};C:\\Program Files (x86)\\Subversion\\bin;C:\\Program Files\\doxygen\\bin;C:\\Program Files (x86)\\Graphviz2.38\\bin"
     env.ANT_HOME = "C:\\apache-ant-1.9.7"
     env.WITH_ARCSDE = "no"
     if (env.MG_BUILD_PLATFORM != "x86" && env.MG_BUILD_PLATFORM != "x64") {
