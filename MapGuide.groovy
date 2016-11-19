@@ -3,7 +3,7 @@
  *
  * This is the jenkins build pipeline for MapGuide
  *
- * Env vars (set up calling job):
+ * Env vars (set up from calling job):
  *
  * - MG_VER_MAJOR: MapGuide Major Version
  * - MG_VER_MINOR: MapGuide Minor Version
@@ -15,6 +15,14 @@
  * - MG_CLEAR_BUILD_AREA: If true, will clear the build area before building
  * - MG_BUILD_ROOT: The root directory where build artifacts will be copied to
  * - MG_CLEANUP_AFTER: If builds and test pass, this will instruct the pipeline to clear the build and staging areas afterwards
+ *
+ * Environmental assumptions:
+ * - It has been set up with the required software
+ * - The following directories exist
+ *    - C:\builds (build artifacts are copied here on successful builds)
+ *    - C:\deps (build deps are stored here)
+ *       - mapguide
+ *       - fdo
  */
 node {
     env.PATH = "${env.PATH};C:\\Program Files (x86)\\Subversion\\bin;C:\\Program Files\\doxygen\\bin;C:\\Program Files (x86)\\Graphviz2.38\\bin"
@@ -26,23 +34,37 @@ node {
     if (env.MG_BUILD_CONFIG != "Debug" && env.MG_BUILD_CONFIG != "Release") {
         error "Unknown config: ${env.MG_BUILD_CONFIG}"
     }
+    // The Visual Studio major version. This is used for tagging the mg-desktop artifact and determining the VS setup script
     def vs_version = "14"
+    // This is called to set up the VS environment
     def vs_init_script = "C:\\Program Files (x86)\\Microsoft Visual C++ Build Tools\\vcbuildtools.bat"
-    def release_label = "trunk"
+    //def vs_init_script = "C:\\Program Files (x86)\\Microsoft Visual Studio ${vs_version}.0\\VC\\vcvarsall.bat"
+    def release_label = "trunk" // Used for tagging installer artifacts
+    //Where the pipeline will svn export the local wc to for building
     def build_area = "./build_area_${env.MG_BUILD_PLATFORM}_${MG_BUILD_CONFIG}"
+    //Where the pipeline will grab the mapguide build deps
     def mg_dep_root = "C:\\deps\\mapguide\\${release_label}"
+    //Where the pipeline will grab the FDO binaries
     def fdo_version = "4.1.0"
-    def mg_ver_major_minor_rev = "${env.MG_VER_MAJOR}.${env.MG_VER_MINOR}.${env.MG_VER_REV}"
     def fdo_dep_root = "C:\\deps\\fdo\\${fdo_version}"
+    //Name of the directory where svn will checkout to
     def checkout_dir_name = "checkout"
-    def svn_rev = "0" //To be set by polling for the latest rev from the poll url
-    def svn_poll_url = "https://svn.osgeo.org/mapguide/sandbox/jng/diet_v2/MgDev"
+    //SVN revision number to be set by polling for the latest rev from the poll url
+    def svn_rev = "0"
+    //The URL to checkout from
     def svn_checkout_url = "https://svn.osgeo.org/mapguide/sandbox/jng/diet_v2/MgDev_Slim"
+    //The URL to poll the latest SVN revision number from. This differs from the poll URL as heavy use of SVN externals 
+    //may mask the true revision number
+    def svn_poll_url = "https://svn.osgeo.org/mapguide/sandbox/jng/diet_v2/MgDev"
+    //Name of the directory where the build process will output to for installer packaging
     def staging_dir_name = "staging_${env.MG_BUILD_PLATFORM}"
+    //Name of the MapGuide OEM buildpack, containing pre-compiled binaries/headers/libs of MapGuide's thirdparty components
     def build_pack = "mapguide-buildpack-${env.MG_BUILD_CONFIG}-Win32-${release_label}-${env.MG_OEM_BUILDPACK_DATE}.exe"
+    //Name of the FDO binary SDK
     def fdo_sdk = "Fdo-${fdo_version}-${env.MG_BUILD_PLATFORM}.7z"
-    def checkout_dir_mgdev = "checkout"
+    //Parameter to pass for VS init script
     def vcbuild_plat = "x86"
+    //MapGuide environment init script name
     def setenv_script_name = "setenvironment"
     if (env.MG_BUILD_PLATFORM == "x86") {
         env.JAVA_HOME = "C:\\Program Files (x86)\\Java\\jdk1.6.0_45"
@@ -52,17 +74,11 @@ node {
         env.JAVA_HOME = "C:\\Program Files\\Java\\jdk1.6.0_45"
         build_pack = "mapguide-buildpack-${env.MG_BUILD_CONFIG}-x64-${release_label}-${env.MG_OEM_BUILDPACK_DATE}.exe"
     }
-    if (!fileExists("${mg_dep_root}\\${build_pack}")) {
-        error "Build pack (${build_pack}) does not exist at: ${mg_dep_root}"
-    }
-    if (!fileExists("${fdo_dep_root}\\${fdo_sdk}")) {
-        error "Build pack (${fdo_sdk}) does not exist at: ${fdo_dep_root}"
-    }
+    //Capture absolute paths
     def staging_path_abs = ""
     def build_area_abs = ""
     def build_installer_abs = ""
     def build_instantsetup_abs = ""
-    //Capture absolute paths
     dir("${build_area}") {
         build_area_abs = pwd()
     }
@@ -76,7 +92,7 @@ node {
         staging_path_abs = pwd()
     }
     echo "MG_SVN_UPDATE is: ${env.MG_SVN_UPDATE}"
-    stage('SVN checkout') { // for display purposes
+    stage('SVN checkout') {
         //NOTE: Be sure to set the global SVN wc format to 1.6 as the current format (1.8)
         //has unacceptably slow checkout/update performance. Observed with the version of
         //SVNKit used by the current version of the SVN plugin (2.7.1)
@@ -106,13 +122,23 @@ node {
             svn_rev = readFile("./svnrev.txt").trim()
         }
     }
-    echo "Building MapGuide v${env.MG_VER_MAJOR}.${env.MG_VER_MINOR}.${env.MG_VER_REV}.${svn_rev} (${env.MG_BUILD_PLATFORM}, ${env.MG_BUILD_CONFIG})"
+    //Now set the appropriate version numbers and artifact names
+    def mg_ver_major_minor_rev = "${env.MG_VER_MAJOR}.${env.MG_VER_MINOR}.${env.MG_VER_REV}"
     def inst_ver = "${mg_ver_major_minor_rev}.${svn_rev}"
     def inst_name = "MapGuideOpenSource-${inst_ver}-${release_label}-${env.MG_BUILD_PLATFORM}"
     def inst_setup_name = "MapGuideOpenSource-${inst_ver}-${release_label}-InstantSetup-${env.MG_BUILD_PLATFORM}"
     def mgd_package_name = "mg-desktop-${inst_ver}-net40-vc${vs_version}-${env.MG_BUILD_PLATFORM}"
+    echo "Building MapGuide v${inst_ver} (${env.MG_BUILD_PLATFORM}, ${env.MG_BUILD_CONFIG})"
     stage('Download required build deps') {
-        //TODO: In an AWS environment, we'd be stashing build deps on S3 and download them here
+        //Verify our build deps exist
+        if (!fileExists("${mg_dep_root}\\${build_pack}")) {
+            error "Build pack (${build_pack}) does not exist at: ${mg_dep_root}"
+        }
+        if (!fileExists("${fdo_dep_root}\\${fdo_sdk}")) {
+            error "Build pack (${fdo_sdk}) does not exist at: ${fdo_dep_root}"
+        }
+        //TODO: In an AWS environment, we'd be stashing build deps on S3 and Download them
+        //should the above fileExists() checks fail
     }
     stage('Setup build area') {
         dir(staging_path_abs) {
