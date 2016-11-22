@@ -272,6 +272,14 @@ cd "${staging_path_abs}"
             dir("${staging_path_abs}") {
                 bat "7z a -mx9 ${mgd_package_name}.zip Desktop DesktopSamples"
             }
+        }, nuget: {
+            dir("${build_area}\\nuget") {
+                bat "powershell .\\make-nuget.ps1 -major ${env.MG_VER_MAJOR} -minor ${env.MG_VER_MINOR} -patch ${env.MG_VER_REV} -rev ${svn_rev} -cpu ${env.MG_BUILD_PLATFORM} -desktopBaseDir ${staging_path_abs}\\Desktop -csMapBaseDir ${staging_path_abs}\\CS-Map\\Dictionaries -webBinDir ${staging_path_abs}\\Web\\www\\mapviewernet\\bin"
+            }
+            dir("${staging_path_abs}\\nuget") {
+                def this_dir = pwd()
+                bat "move ${build_area_abs}\\nuget\\*.nupkg ${this_dir}"
+            }
         }
         failFast: true
     }
@@ -280,7 +288,12 @@ cd "${staging_path_abs}"
             def out_dir = pwd()
             bat """copy /Y ${staging_path_abs}\\${inst_name}.exe ${out_dir}
 copy /Y ${staging_path_abs}\\${inst_setup_name}.exe ${out_dir}
-copy /Y ${staging_path_abs}\\${mgd_package_name}.zip ${out_dir}"""
+copy /Y ${staging_path_abs}\\${mgd_package_name}.zip ${out_dir}
+copy /Y ${staging_path_abs}\\fusion-selfbuild\\fusion-${mg_ver_major_minor_rev}-buildtools.zip ${out_dir}"""
+        }
+        dir("${env.MG_BUILD_ROOT}\\mapguide\\${mg_ver_major_minor_rev}\\nuget") {
+            def out_dir = pwd()
+            bat "copy /Y ${staging_path_abs}\\nuget\\*.nupkg ${out_dir}"
         }
         echo "MG_CLEANUP_AFTER is ${env.MG_CLEANUP_AFTER}"
         if (env.MG_CLEANUP_AFTER == "true") {
