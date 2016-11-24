@@ -112,32 +112,30 @@ class MgBuildEnvironment implements Serializable {
 }
 
 class MgBuildRun implements Serializable {
-    def scriptEnv
     final MgBuildEnvironment buildEnv
-    MgBuildRun(MgBuildEnvironment buildEnv, scriptEnv) {
+    MgBuildRun(MgBuildEnvironment buildEnv) {
         this.buildEnv = buildEnv
-        this.scriptEnv = scriptEnv
     }
-    void build_dep_sanity_check() {
-        if (!this.scriptEnv.fileExists("${this.buildEnv.mg_dep_root}\\${this.buildEnv.build_pack}")) {
-            this.scriptEnv.error "Build pack (${this.buildEnv.build_pack}) does not exist at: ${this.buildEnv.mg_dep_root}"
+    void build_dep_sanity_check(scriptEnv) {
+        if (!scriptEnv.fileExists("${this.buildEnv.mg_dep_root}\\${this.buildEnv.build_pack}")) {
+            scriptEnv.error "Build pack (${this.buildEnv.build_pack}) does not exist at: ${this.buildEnv.mg_dep_root}"
         } else {
-            this.scriptEnv.echo "Sanity - MapGuide OEM buildpack is present"
+            scriptEnv.echo "Sanity - MapGuide OEM buildpack is present"
         }
-        if (!this.scriptEnv.fileExists("${this.buildEnv.fdo_dep_root}\\${this.buildEnv.fdo_sdk}")) {
-            this.scriptEnv.error "Build pack (${this.buildEnv.fdo_sdk}) does not exist at: ${this.buildEnv.fdo_dep_root}"
+        if (!scriptEnv.fileExists("${this.buildEnv.fdo_dep_root}\\${this.buildEnv.fdo_sdk}")) {
+            scriptEnv.error "Build pack (${this.buildEnv.fdo_sdk}) does not exist at: ${this.buildEnv.fdo_dep_root}"
         } else {
-            this.scriptEnv.echo "Sanity - FDO binary SDK is present"
+            scriptEnv.echo "Sanity - FDO binary SDK is present"
         }
     }
-    void windows_build(stash) {
-        this.scriptEnv.dir ("./${this.buildEnv.name}") {
-            this.scriptEnv.unstash stash
+    void windows_build(stash, scriptEnv) {
+        scriptEnv.dir ("./${this.buildEnv.name}") {
+            scriptEnv.unstash stash
         }
-        this.scriptEnv.echo "Building MapGuide v${this.buildEnv.inst_ver()} (${this.buildEnv.platform}, ${this.buildEnv.config})"
-        this.scriptEnv.dir ("./${this.buildEnv.name}/build_area") {
-            if (!this.scriptEnv.fileExists(this.buildEnv.mg_init_script)) {
-                this.scriptEnv.error "Sanity check fail: Did build_area un-stash properly?"
+        scriptEnv.echo "Building MapGuide v${this.buildEnv.inst_ver()} (${this.buildEnv.platform}, ${this.buildEnv.config})"
+        scriptEnv.dir ("./${this.buildEnv.name}/build_area") {
+            if (!scriptEnv.fileExists(this.buildEnv.mg_init_script)) {
+                scriptEnv.error "Sanity check fail: Did build_area un-stash properly?"
             }
         }
     }
@@ -238,12 +236,12 @@ node ("master") {
         parallel (
             "windows-x86-release": {
                 node("windows") {
-                    new MgBuildRun(environments['windows-x86-release'], this).build_dep_sanity_check()
+                    new MgBuildRun(environments['windows-x86-release']).build_dep_sanity_check(this)
                 }
             },
             "windows-x64-release": {
                 node("windows") {
-                    new MgBuildRun(environments['windows-x64-release'], this).build_dep_sanity_check()
+                    new MgBuildRun(environments['windows-x64-release']).build_dep_sanity_check(this)
                 }
             }
         )        
@@ -268,12 +266,12 @@ node ("master") {
         parallel (
             "windows-x86-release": {
                 node("windows") {
-                    new MgBuildRun(environments["windows-x86-release"], this).windows_build('svn_build_area_export')
+                    new MgBuildRun(environments["windows-x86-release"]).windows_build('svn_build_area_export', this)
                 }
             },
             "windows-x64-release": {
                 node("windows") {
-                    new MgBuildRun(environments["windows-x64-release"], this).windows_build('svn_build_area_export')
+                    new MgBuildRun(environments["windows-x64-release"]).windows_build('svn_build_area_export', this)
                 }
             }
         )
