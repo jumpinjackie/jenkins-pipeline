@@ -155,9 +155,9 @@ environments["windows-x86-release"] = new MgBuildEnvironment("windows-x86-releas
                                                              GlobalConfig.mg_dep_root,
                                                              GlobalConfig.fdo_dep_root)
 
-environments["windows-x64-release"] = new MgBuildEnvironment("windows-x86-release",
+environments["windows-x64-release"] = new MgBuildEnvironment("windows-x64-release",
                                                              "Release",
-                                                             "x86",
+                                                             "x64",
                                                              env.MG_VER_MAJOR,
                                                              env.MG_VER_MINOR,
                                                              env.MG_VER_REV,
@@ -168,8 +168,8 @@ environments["windows-x64-release"] = new MgBuildEnvironment("windows-x86-releas
                                                              GlobalConfig.mg_dep_root,
                                                              GlobalConfig.fdo_dep_root)
 
-environments["windows-x86-debug"] = new MgBuildEnvironment("windows-x86-release",
-                                                           "Release",
+environments["windows-x86-debug"] = new MgBuildEnvironment("windows-x86-debug",
+                                                           "Debug",
                                                            "x86",
                                                            env.MG_VER_MAJOR,
                                                            env.MG_VER_MINOR,
@@ -181,9 +181,9 @@ environments["windows-x86-debug"] = new MgBuildEnvironment("windows-x86-release"
                                                            GlobalConfig.mg_dep_root,
                                                            GlobalConfig.fdo_dep_root)
 
-environments["windows-x64-debug"] = new MgBuildEnvironment("windows-x86-release",
-                                                           "Release",
-                                                           "x86",
+environments["windows-x64-debug"] = new MgBuildEnvironment("windows-x64-debug",
+                                                           "Debug",
+                                                           "x64",
                                                            env.MG_VER_MAJOR,
                                                            env.MG_VER_MINOR,
                                                            env.MG_VER_REV,
